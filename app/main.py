@@ -37,12 +37,14 @@ class Project(ProjectCreate):
 # Simulação de um banco de dados (em memória)
 projects_db = {}
     
+# Variável global para incrementar o ID
 counter_id = 1
 
 # Rota POST para criação dos projetos.
 # Retorna a classe Project criada e status HTTP 201.
 @app.post('/projects/create', response_model=Project, status_code=status.HTTP_201_CREATED)
 def create_project(project: ProjectCreate):
+    
     global counter_id
     project_id = counter_id
     criado_em = datetime.utcnow()
@@ -54,8 +56,19 @@ def create_project(project: ProjectCreate):
     
 # Rota GET que lista os projetos com um limite (paginação)
 @app.get('/projects', response_model=List[Project], status_code=status.HTTP_200_OK)
-def list_projects(skip: int = Query(0, ge=0), limit: int = Query(10, gt=0)):
+def list_projects(
+    status: Optional[StatusEnum] = Query(None, description='Filtrar por status.'),
+    prioridade: Optional[PrioridadeEnum] = Query(None, description='Filtrar por prioridade.'),
+    skip: int = Query(0, ge=0), 
+    limit: int = Query(10, gt=0)
+):
+    
     projects = list(projects_db.values())
+    
+    if status:
+        projects = [p for p in projects if p.status == status]
+    if prioridade:
+        projects = [p for p in projects if p.prioridade == prioridade]    
     return projects[skip: skip + limit]
 
 # Rota GET que busca um projeto pelo ID
@@ -68,7 +81,11 @@ def get_project(project_id: int = Path(..., ge=1, description='ID do projeto vin
 
 # Rota PUT que atualiza um projeto pelo ID
 @app.put('/projects/{project_id}', response_model=Project, status_code=status.HTTP_200_OK)
-def update_project(project_id: int = Path(..., ge=1, description='ID do projeto vindo como path parameter'), project: ProjectCreate = Body(...)):
+def update_project(
+    project_id: int = Path(..., ge=1, description='ID do projeto vindo como path parameter'), 
+    project: ProjectCreate = Body(..., description='Cria um ProjectCreate vindo do body.')
+):
+    
     stored_project = projects_db.get(project_id)
     if not stored_project:
         raise HTTPException(status_code=404, detail=f'Projeto com ID = {project_id} não encontrado.')
@@ -78,6 +95,7 @@ def update_project(project_id: int = Path(..., ge=1, description='ID do projeto 
 
 @app.delete('/projects/{project_id}', status_code=status.HTTP_204_NO_CONTENT)
 def delete_project(project_id: int = Path(..., ge=1, description='ID do projeto vindo como path parameter')):
+    
     if project_id in projects_db:
         del projects_db[project_id]
         # return {'message': f'Projeto com ID {project_id} deletado com sucesso.'}
