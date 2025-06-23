@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from enum import Enum
 from typing import Optional, List
 from datetime import datetime
+import pytz
 
 app = FastAPI(
     title='API de Gerenciamento de Projetos Simplificada',
@@ -47,7 +48,8 @@ def create_project(project: ProjectCreate):
     
     global counter_id
     project_id = counter_id
-    criado_em = datetime.utcnow()
+    fuso_brasil = pytz.timezone('America/Sao_Paulo')
+    criado_em = datetime.now(fuso_brasil)
     criado_em_formatado = criado_em.strftime('%d-%m-%Y %H:%M:%S')
     new_project = Project(id=project_id, criado_em=criado_em_formatado, **project.model_dump())
     projects_db[project_id] = new_project
